@@ -1,0 +1,17 @@
+{
+  "account_id": "301276846152",
+  "region": "ap-south-1",
+  "deployed_at": "2026-10-31T08:17:06Z",
+  "s3_bucket": "cloud-shield-flow-logs-301276846152-ap-south-1",
+  "iam_role": "CloudShield-EC2-SSM-Role",
+  "instance_profile": "CloudShield-EC2-SSM-Profile",
+  "vpc_id": "vpc-0381418a20cc9beca",
+  "igw_id": "igw-0eb8f12732f1f0544",
+  "subnet_id": "subnet-05abb0a1a32603030",
+  "route_table_id": "rtb-0ff83e62c8264b578",
+  "network_acl_id": "acl-05309654bc7fc7886",
+  "security_group_id": "sg-0a4463e9dc88eef60",
+  "flow_log_id": "fl-0daa3a2f3a3a8fff1",
+  "instance_id": "i-07879dab635d682e5",
+  "public_ip": "3.108.8.33"
+}
