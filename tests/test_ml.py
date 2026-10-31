@@ -80,3 +80,42 @@ def test_treeshap_explainer():
     assert "attributions" in res
     assert len(res["attributions"]) == len(FEATURE_COLUMNS)
     assert res["inference_time_ms"] < 1000  # Sub-second guarantee
+
+def test_all_four_models_and_benchmarks():
+    """Verify all 4 ML models (RF, XGBoost, SVM, NN) and benchmark metrics are present and functional."""
+    import joblib
+    model_files = {
+        "Random Forest": MODELS_DIR / "rf_nids.pkl",
+        "XGBoost": MODELS_DIR / "xgboost_nids.pkl",
+        "SVM": MODELS_DIR / "svm_nids.pkl",
+        "Neural Network": MODELS_DIR / "nn_nids.pkl",
+    }
+    for name, path in model_files.items():
+        assert path.exists(), f"Model {name} missing at {path}"
+        m = joblib.load(path)
+        assert hasattr(m, "predict"), f"Model {name} missing predict method"
+        assert hasattr(m, "predict_proba"), f"Model {name} missing predict_proba method"
+
+    # Test predictions on sample flow
+    with open(SAMPLE_FLOWS_FILE, "r") as f:
+        flows = json.load(f)
+    X_features, _ = transform_flow_logs(flows[:5])
+    for name, path in model_files.items():
+        m = joblib.load(path)
+        preds = m.predict(X_features)
+        probs = m.predict_proba(X_features)
+        assert len(preds) == len(X_features)
+        assert probs.shape == (len(X_features), 4)
+
+    # Test benchmark metrics JSON
+    bench_file = MODELS_DIR / "benchmark_metrics.json"
+    assert bench_file.exists()
+    with open(bench_file, "r") as f:
+        data = json.load(f)
+    for expected_model in ["Random Forest", "XGBoost", "SVM", "Neural Network"]:
+        assert expected_model in data
+        metrics = data[expected_model]
+        for metric_name in ["accuracy", "precision", "recall", "f1", "fpr", "latency_ms"]:
+            assert metric_name in metrics
+            assert isinstance(metrics[metric_name], (int, float))
+
