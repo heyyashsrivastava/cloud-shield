@@ -65,6 +65,49 @@ st.markdown("""
         padding: 16px;
         margin-bottom: 12px;
     }
+    /* Persistent Cyber Top Nav Tabs */
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] {
+        display: flex;
+        gap: 12px;
+        background-color: #0b1329;
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid #1e293b;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+        background: #111827;
+        padding: 10px 24px;
+        border-radius: 8px;
+        border: 1px solid #1f2937;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #94a3b8;
+        transition: all 0.25s ease-in-out;
+        user-select: none;
+    }
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
+        display: none !important;
+    }
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
+        background: #1e293b;
+        color: #f8fafc;
+        border-color: #3b82f6;
+    }
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"],
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        border-color: #60a5fa !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+    }
+    div.main div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) p {
+        color: #ffffff !important;
+        font-weight: 700;
+    }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -120,11 +163,19 @@ with st.sidebar:
 
     st.divider()
     st.subheader("📡 Telemetry Source")
+    query_source = st.query_params.get("source", "s3").lower()
+    default_source_idx = 1 if query_source == "demo" else 0
+
+    def on_source_changed():
+        chosen_source = st.session_state.get("telemetry_ingest_mode", "")
+        st.query_params["source"] = "s3" if "S3" in chosen_source else "demo"
+
     ingest_mode = st.radio(
         "Ingestion Mode:",
         ["☁️ Live AWS S3 Polling", "🎮 Instant Demo Replay"],
-        index=0,
-        key="telemetry_ingest_mode"
+        index=default_source_idx,
+        key="telemetry_ingest_mode",
+        on_change=on_source_changed
     )
 
     st.divider()
@@ -247,17 +298,49 @@ else:
     meta_df = pd.DataFrame()
     X_features = pd.DataFrame()
 
-# Main Tabs
-tab1, tab2, tab3 = st.tabs([
+# Persistent Navigation Tabs
+TAB_OPTIONS = [
     "🛡️ Real-Time SOC Monitor",
     "🧠 Explainable AI (TreeSHAP)",
     "⚡ SOAR Active Remediation"
-])
+]
+TAB_KEY_MAP = {"monitor": 0, "explainability": 1, "soar": 2}
+INDEX_TO_KEY = ["monitor", "explainability", "soar"]
+
+# Read and validate query param
+query_tab = st.query_params.get("tab", "monitor").lower()
+target_tab_idx = TAB_KEY_MAP.get(query_tab, 0)
+
+# Synchronize session state with query param
+if "top_nav_radio" not in st.session_state:
+    st.session_state["top_nav_radio"] = TAB_OPTIONS[target_tab_idx]
+elif st.session_state.get("_prev_query_tab") != query_tab:
+    st.session_state["top_nav_radio"] = TAB_OPTIONS[target_tab_idx]
+
+st.session_state["_prev_query_tab"] = query_tab
+
+def on_tab_nav_changed():
+    chosen_label = st.session_state.get("top_nav_radio", TAB_OPTIONS[0])
+    new_idx = TAB_OPTIONS.index(chosen_label) if chosen_label in TAB_OPTIONS else 0
+    st.query_params["tab"] = INDEX_TO_KEY[new_idx]
+    st.session_state["_prev_query_tab"] = INDEX_TO_KEY[new_idx]
+
+active_tab = st.radio(
+    "Navigation View",
+    options=TAB_OPTIONS,
+    horizontal=True,
+    key="top_nav_radio",
+    on_change=on_tab_nav_changed,
+    label_visibility="collapsed"
+)
+
+current_idx = TAB_OPTIONS.index(active_tab) if active_tab in TAB_OPTIONS else 0
+st.query_params["tab"] = INDEX_TO_KEY[current_idx]
 
 # ==============================================================================
 # TAB 1: SOC MONITOR
 # ==============================================================================
-with tab1:
+if active_tab == "🛡️ Real-Time SOC Monitor":
     st.header("Real-Time Intrusion Detection & Telemetry Feed")
     
     # KPI Row
@@ -324,7 +407,7 @@ with tab1:
 # ==============================================================================
 # TAB 2: EXPLAINABILITY (TreeSHAP)
 # ==============================================================================
-with tab2:
+elif active_tab == "🧠 Explainable AI (TreeSHAP)":
     st.header("🧠 Sub-Second Explainable AI (TreeSHAP)")
     st.markdown("Attribution of model decisions at flow level with pre-computed background summary.")
 
@@ -366,7 +449,7 @@ with tab2:
 # ==============================================================================
 # TAB 3: SOAR & ACTIVE RESPONSE
 # ==============================================================================
-with tab3:
+elif active_tab == "⚡ SOAR Active Remediation":
     st.header("⚡ SOAR Remediation Console & Safety Controls")
     
     # Allowlist Banner
@@ -385,6 +468,8 @@ with tab3:
                 try:
                     res = quarantine_ip(target_ip_input, reason=quarantine_reason, mitre_technique=quarantine_mitre)
                     st.success(f"Successfully quarantined IP {target_ip_input}! AWS rule created.")
+                    st.query_params["tab"] = "soar"
+                    st.session_state["top_nav_radio"] = TAB_OPTIONS[2]
                     st.rerun()
                 except SecurityViolationError as e:
                     st.error(str(e))
@@ -403,6 +488,8 @@ with tab3:
                 try:
                     res = restore_ip(restore_target, reason=restore_reason)
                     st.success(f"Restored IP {restore_target} to normal access.")
+                    st.query_params["tab"] = "soar"
+                    st.session_state["top_nav_radio"] = TAB_OPTIONS[2]
                     st.rerun()
                 except Exception as e:
                     st.error(f"Restore failed: {e}")
