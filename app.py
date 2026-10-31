@@ -175,7 +175,52 @@ st.markdown("""
         border-radius: 20px;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+    }
+    .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* KPI Card 4 Container & Selectbox overrides */
+    div[data-testid="column"]:nth-child(4) div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: #111827 !important;
+        border: 1px solid #1f2937 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        height: 100% !important;
+        min-height: 104px !important;
+        padding: 10px 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+    }
+    div[data-testid="column"]:nth-child(4) div[data-testid="stSelectbox"] {
+        margin-top: -4px !important;
+        margin-bottom: -4px !important;
+    }
+    div[data-testid="column"]:nth-child(4) div[data-baseweb="select"] > div {
+        background-color: #1e293b !important;
+        border: 1px solid #6366f1 !important;
+        border-radius: 6px !important;
+        padding: 2px 8px !important;
+        min-height: 32px !important;
+        box-shadow: 0 1px 3px rgba(99, 102, 241, 0.25) !important;
+    }
+    div[data-testid="column"]:nth-child(4) div[data-baseweb="select"] * {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: #f8fafc !important;
     }
 
     /* Tables */
@@ -450,85 +495,84 @@ with st.sidebar:
 
     st.divider()
 
-    # Telemetry Ingest Mode Selector
-    st.caption("📡 Telemetry Feed")
-    query_source = st.query_params.get("source", "s3").lower()
-    default_source_idx = 1 if query_source == "demo" else 0
+    # Attack Simulator & Telemetry Feed Expander (clean sidebar on Overview, auto-expanded on Live Traffic)
+    with st.expander("⚡ Attack Simulator & Telemetry Feed", expanded=(active_nav == "⏱️ Live Traffic")):
+        st.caption("📡 Telemetry Feed")
+        query_source = st.query_params.get("source", "s3").lower()
+        default_source_idx = 1 if query_source == "demo" else 0
 
-    def on_source_changed():
-        chosen_source = st.session_state.get("telemetry_ingest_mode", "")
-        st.query_params["source"] = "s3" if "S3" in chosen_source else "demo"
+        def on_source_changed():
+            chosen_source = st.session_state.get("telemetry_ingest_mode", "")
+            st.query_params["source"] = "s3" if "S3" in chosen_source else "demo"
 
-    ingest_mode = st.radio(
-        "Ingestion Mode:",
-        ["☁️ Live AWS S3 Polling", "🎮 Instant Demo Replay"],
-        index=default_source_idx,
-        key="telemetry_ingest_mode",
-        on_change=on_source_changed,
-        label_visibility="collapsed"
-    )
+        ingest_mode = st.radio(
+            "Ingestion Mode:",
+            ["☁️ Live AWS S3 Polling", "🎮 Instant Demo Replay"],
+            index=default_source_idx,
+            key="telemetry_ingest_mode",
+            on_change=on_source_changed,
+            label_visibility="collapsed"
+        )
 
-    # Attack Bursts Simulation
-    st.divider()
-    st.caption("⚡ Simulate Cyber Attacks")
-    col_s_btn1, col_s_btn2 = st.columns(2)
-    with col_s_btn1:
-        if st.button("🌊 DoS SYN", use_container_width=True):
-            from scripts.simulate_traffic import simulate_syn_flood
+        st.caption("⚡ Dispatch Attack Bursts")
+        col_s_btn1, col_s_btn2 = st.columns(2)
+        with col_s_btn1:
+            if st.button("🌊 DoS SYN", use_container_width=True):
+                from scripts.simulate_traffic import simulate_syn_flood
+                try:
+                    simulate_syn_flood(num_packets=50)
+                    st.success("DoS sent!")
+                    time.sleep(0.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+            if st.button("🔍 Port Scan", use_container_width=True):
+                from scripts.simulate_traffic import simulate_port_scan
+                try:
+                    simulate_port_scan()
+                    st.success("Scan sent!")
+                    time.sleep(0.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+        with col_s_btn2:
+            if st.button("🔑 Brute Force", use_container_width=True):
+                from scripts.simulate_traffic import simulate_brute_force
+                try:
+                    simulate_brute_force(count=15)
+                    st.success("Auth burst sent!")
+                    time.sleep(0.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+            if st.button("✅ Normal Traffic", use_container_width=True):
+                from scripts.simulate_traffic import simulate_normal_traffic
+                try:
+                    simulate_normal_traffic(count=15)
+                    st.success("Benign sent!")
+                    time.sleep(0.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+
+        if st.button("💥 Run Full Attack Suite", use_container_width=True):
+            from scripts.simulate_traffic import run_all_simulations
             try:
-                simulate_syn_flood(num_packets=50)
-                st.success("DoS sent!")
+                run_all_simulations()
+                st.success("All attacks dispatched!")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as e:
                 st.error(str(e))
-
-        if st.button("🔍 Port Scan", use_container_width=True):
-            from scripts.simulate_traffic import simulate_port_scan
-            try:
-                simulate_port_scan()
-                st.success("Scan sent!")
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e:
-                st.error(str(e))
-
-    with col_s_btn2:
-        if st.button("🔑 Brute Force", use_container_width=True):
-            from scripts.simulate_traffic import simulate_brute_force
-            try:
-                simulate_brute_force(count=15)
-                st.success("Auth burst sent!")
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e:
-                st.error(str(e))
-
-        if st.button("✅ Normal Traffic", use_container_width=True):
-            from scripts.simulate_traffic import simulate_normal_traffic
-            try:
-                simulate_normal_traffic(count=15)
-                st.success("Benign sent!")
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e:
-                st.error(str(e))
-
-    if st.button("💥 Run Full Attack Suite", use_container_width=True):
-        from scripts.simulate_traffic import run_all_simulations
-        try:
-            run_all_simulations()
-            st.success("All attacks dispatched!")
-            time.sleep(0.5)
-            st.rerun()
-        except Exception as e:
-            st.error(str(e))
 
     # Sidebar Bottom Status & AWS Branding
     st.divider()
     st.markdown("""
     <div style="margin-bottom:12px;">
-        <span class="badge-status-online">● System Online</span>
+        <span class="badge-status-online"><span class="pulse-dot"></span> System Online</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -680,29 +724,23 @@ if active_nav == "🏠 Overview":
             "SVM": "(Maximum Margin)",
             "Neural Network": "(Multi-Layer Perceptron)"
         }
-        st.markdown("""
-        <div class="kpi-card" style="padding-bottom:10px;">
-            <div class="kpi-icon icon-purple">🧠</div>
-            <div class="kpi-content">
-                <div class="kpi-title">Model In Use</div>
-        """, unsafe_allow_html=True)
-        
-        chosen_model = st.selectbox(
-            "Model In Use",
-            ["XGBoost", "Random Forest", "SVM", "Neural Network"],
-            index=["XGBoost", "Random Forest", "SVM", "Neural Network"].index(active_model_name),
-            key="overview_model_switcher",
-            label_visibility="collapsed"
-        )
-        if chosen_model != active_model_name:
-            st.session_state["active_ml_model_name"] = chosen_model
-            st.rerun()
-
-        st.markdown(f"""
-                <div class="kpi-sub" style="color:#a78bfa;font-weight:600;">{model_subtexts.get(chosen_model, '')}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            c_icon, c_body = st.columns([1, 3.2], vertical_alignment="center")
+            with c_icon:
+                st.markdown('<div class="kpi-icon icon-purple">🧠</div>', unsafe_allow_html=True)
+            with c_body:
+                st.markdown('<div class="kpi-title" style="margin-bottom:2px;">Model In Use</div>', unsafe_allow_html=True)
+                chosen_model = st.selectbox(
+                    "Model In Use",
+                    ["XGBoost", "Random Forest", "SVM", "Neural Network"],
+                    index=["XGBoost", "Random Forest", "SVM", "Neural Network"].index(active_model_name),
+                    key="overview_model_switcher",
+                    label_visibility="collapsed"
+                )
+                if chosen_model != active_model_name:
+                    st.session_state["active_ml_model_name"] = chosen_model
+                    st.rerun()
+                st.markdown(f'<div class="kpi-sub" style="color:#a78bfa;font-weight:600;margin-top:-2px;">{model_subtexts.get(chosen_model, "")}</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
 
@@ -733,7 +771,7 @@ if active_nav == "🏠 Overview":
                 wedges,
                 ['Normal  97.3%', 'Attack  2.7%'],
                 loc='lower center',
-                bbox_to_anchor=(0.5, -0.2),
+                bbox_to_anchor=(0.5, -0.08),
                 ncol=2,
                 frameon=False,
                 labelcolor='#94a3b8',
@@ -762,7 +800,8 @@ if active_nav == "🏠 Overview":
                 ax_bar.text(bar.get_x() + bar.get_width()/2, h + 1.8, f'{int(h)}', ha='center', va='bottom', color='#f8fafc', fontsize=8, fontweight='bold')
             
             ax_bar.tick_params(colors='#94a3b8', labelsize=7.5)
-            ax_bar.set_ylim(0, 95)
+            ax_bar.set_ylim(0, 100)
+            ax_bar.set_yticks([0, 20, 40, 60, 80, 100])
             ax_bar.grid(axis='y', color='#1e293b', linestyle='--', linewidth=0.5)
             for spine in ax_bar.spines.values():
                 spine.set_color('#1e293b')
@@ -771,48 +810,70 @@ if active_nav == "🏠 Overview":
             st.markdown("</div>", unsafe_allow_html=True)
 
         with m3:
-            st.markdown("""
+            rf_b = benchmark_metrics.get("Random Forest", {"accuracy": 0.958, "precision": 0.934, "recall": 0.917, "f1": 0.925, "fpr": 0.062, "latency_ms": 12})
+            xgb_b = benchmark_metrics.get("XGBoost", {"accuracy": 0.972, "precision": 0.956, "recall": 0.948, "f1": 0.952, "fpr": 0.038, "latency_ms": 18})
+            
+            # If user selected SVM or Neural Network, dynamically show active model as 3rd column
+            show_extra = active_model_name in ["SVM", "Neural Network"]
+            extra_b = benchmark_metrics.get(active_model_name, {}) if show_extra else None
+
+            extra_th = f'<th style="color:#a855f7;">{active_model_name} ★</th>' if show_extra else ""
+            rf_th = '<th style="color:#10b981;">Random Forest' + (' ★</th>' if active_model_name == "Random Forest" else '</th>')
+            xgb_th = '<th style="color:#3b82f6;">XGBoost' + (' ★</th>' if active_model_name == "XGBoost" else '</th>')
+
+            table_rows_html = f"""
+                <tr>
+                    <td>Accuracy</td>
+                    <td>{rf_b['accuracy']*100:.1f}%</td>
+                    <td>{xgb_b['accuracy']*100:.1f}%</td>
+                    {f"<td>{extra_b['accuracy']*100:.1f}%</td>" if show_extra else ""}
+                </tr>
+                <tr>
+                    <td>Precision</td>
+                    <td>{rf_b['precision']*100:.1f}%</td>
+                    <td>{xgb_b['precision']*100:.1f}%</td>
+                    {f"<td>{extra_b['precision']*100:.1f}%</td>" if show_extra else ""}
+                </tr>
+                <tr>
+                    <td>Recall</td>
+                    <td>{rf_b['recall']*100:.1f}%</td>
+                    <td>{xgb_b['recall']*100:.1f}%</td>
+                    {f"<td>{extra_b['recall']*100:.1f}%</td>" if show_extra else ""}
+                </tr>
+                <tr>
+                    <td>F1-Score</td>
+                    <td>{rf_b['f1']*100:.1f}%</td>
+                    <td>{xgb_b['f1']*100:.1f}%</td>
+                    {f"<td>{extra_b['f1']*100:.1f}%</td>" if show_extra else ""}
+                </tr>
+                <tr>
+                    <td>False Positive Rate</td>
+                    <td>{rf_b['fpr']*100:.1f}%</td>
+                    <td>{xgb_b['fpr']*100:.1f}%</td>
+                    {f"<td>{extra_b['fpr']*100:.1f}%</td>" if show_extra else ""}
+                </tr>
+                <tr>
+                    <td>Detection Latency</td>
+                    <td>{rf_b['latency_ms']} ms</td>
+                    <td>{xgb_b['latency_ms']} ms</td>
+                    {f"<td>{extra_b['latency_ms']} ms</td>" if show_extra else ""}
+                </tr>
+            """
+
+            st.markdown(f"""
             <div class="card-box" style="height:100%;">
                 <div class="card-header-title">Model Performance</div>
                 <table class="proto-table">
                     <thead>
                         <tr>
                             <th>Metric</th>
-                            <th style="color:#10b981;">Random Forest</th>
-                            <th style="color:#3b82f6;">XGBoost</th>
+                            {rf_th}
+                            {xgb_th}
+                            {extra_th}
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Accuracy</td>
-                            <td>95.8%</td>
-                            <td>97.2%</td>
-                        </tr>
-                        <tr>
-                            <td>Precision</td>
-                            <td>93.4%</td>
-                            <td>95.6%</td>
-                        </tr>
-                        <tr>
-                            <td>Recall</td>
-                            <td>91.7%</td>
-                            <td>94.8%</td>
-                        </tr>
-                        <tr>
-                            <td>F1-Score</td>
-                            <td>92.5%</td>
-                            <td>95.2%</td>
-                        </tr>
-                        <tr>
-                            <td>False Positive Rate</td>
-                            <td>6.2%</td>
-                            <td>3.8%</td>
-                        </tr>
-                        <tr>
-                            <td>Detection Latency</td>
-                            <td>12 ms</td>
-                            <td>18 ms</td>
-                        </tr>
+                        {table_rows_html}
                     </tbody>
                 </table>
             </div>
@@ -871,7 +932,7 @@ if active_nav == "🏠 Overview":
                             <td>10.0.1.23</td>
                             <td style="color:#10b981;font-weight:600;">Normal</td>
                             <td style="color:#10b981;">Normal</td>
-                            <td><span class="badge-pill badge-normal">Allowed</span></td>
+                            <td><span class="badge-pill badge-normal">Normal</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -888,15 +949,24 @@ if active_nav == "🏠 Overview":
             fig_acc, ax_acc = plt.subplots(figsize=(4.2, 2.7), facecolor='#111827')
             ax_acc.set_facecolor('#111827')
             comp_models = ['Random Forest', 'XGBoost', 'SVM', 'Neural Network']
-            comp_accs = [95.8, 97.2, 92.6, 89.3]
+            comp_accs = [
+                benchmark_metrics.get('Random Forest', {}).get('accuracy', 0.958) * 100,
+                benchmark_metrics.get('XGBoost', {}).get('accuracy', 0.972) * 100,
+                benchmark_metrics.get('SVM', {}).get('accuracy', 0.926) * 100,
+                benchmark_metrics.get('Neural Network', {}).get('accuracy', 0.893) * 100,
+            ]
             comp_colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f97316']
+            edge_colors = ['#ffffff' if m == active_model_name else '#111827' for m in comp_models]
+            edge_widths = [2.2 if m == active_model_name else 0.8 for m in comp_models]
 
-            bars_acc = ax_acc.bar(comp_models, comp_accs, color=comp_colors, width=0.52)
+            bars_acc = ax_acc.bar(comp_models, comp_accs, color=comp_colors, edgecolor=edge_colors, linewidth=edge_widths, width=0.52)
             for bar in bars_acc:
                 h = bar.get_height()
                 ax_acc.text(bar.get_x() + bar.get_width()/2, h + 0.6, f'{h:.1f}%', ha='center', va='bottom', color='#f8fafc', fontsize=8, fontweight='bold')
 
             ax_acc.set_ylim(70, 100)
+            ax_acc.set_yticks([70, 75, 80, 85, 90, 95, 100])
+            ax_acc.set_yticklabels(['70%', '75%', '80%', '85%', '90%', '95%', '100%'])
             ax_acc.tick_params(colors='#94a3b8', labelsize=7.5)
             ax_acc.grid(axis='y', color='#1e293b', linestyle='--', linewidth=0.5)
             for spine in ax_acc.spines.values():
@@ -992,9 +1062,13 @@ elif active_nav == "⏱️ Live Traffic":
     
     with col_stream_toggle:
         stream_is_fs = (st.query_params.get("stream_fs") == "1" or st.query_params.get("stream_view") == "fullscreen")
-        
+        if "telemetry_view_toggle" not in st.session_state or st.session_state.get("_last_synced_fs") != stream_is_fs:
+            st.session_state["telemetry_view_toggle"] = stream_is_fs
+            st.session_state["_last_synced_fs"] = stream_is_fs
+
         def on_stream_view_toggle():
             active_fs = st.session_state.get("telemetry_view_toggle", False)
+            st.session_state["_last_synced_fs"] = active_fs
             if active_fs:
                 st.query_params["stream_view"] = "fullscreen"
                 st.query_params["stream_fs"] = "1"
@@ -1006,7 +1080,6 @@ elif active_nav == "⏱️ Live Traffic":
 
         expanded_stream = st.toggle(
             "⛶ Full Screen View",
-            value=stream_is_fs,
             key="telemetry_view_toggle",
             on_change=on_stream_view_toggle,
             help="Expand Live Telemetry table to full screen height and persist state across browser refreshes."
