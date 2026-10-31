@@ -110,93 +110,33 @@ with st.sidebar:
             pass
 
     st.divider()
-    st.subheader("🎯 Target Honeypot Website")
-
-    # Check local target health
-    target_local_online = False
-    try:
-        r = requests.get("http://127.0.0.1:5000/api/health", timeout=0.6)
-        if r.status_code == 200:
-            target_local_online = True
-    except Exception:
-        target_local_online = False
-
-    if target_local_online:
-        st.success("🟢 Apex Portal: ONLINE (Port 5000)")
-        st.markdown("[🔗 **Open Apex Financial Portal ↗**](http://localhost:5000)")
-        col_hp1, col_hp2 = st.columns(2)
-        with col_hp1:
-            if st.button("🔄 Refresh", use_container_width=True):
-                st.rerun()
-        with col_hp2:
-            if st.button("🗑️ Clear Logs", use_container_width=True):
-                try:
-                    requests.post("http://127.0.0.1:5000/api/clear-logs", timeout=1.0)
-                except Exception:
-                    pass
-                if LOCAL_FLOW_LOG_FILE.exists():
-                    try:
-                        with open(LOCAL_FLOW_LOG_FILE, "w", encoding="utf-8") as f:
-                            f.write("")
-                    except Exception:
-                        pass
-                st.success("Honeypot logs cleared!")
-                time.sleep(0.5)
-                st.rerun()
+    st.subheader("🎯 Target Web Server")
+    pub_ip = infra_state.get("public_ip")
+    if pub_ip and pub_ip != "PENDING":
+        st.success(f"🟢 **Live Target:** [http://{pub_ip}](http://{pub_ip})")
+        st.caption("Victim server: Apex Global Financial Portal on AWS EC2 (Port 80)")
     else:
-        st.warning("⚪ Apex Portal: OFFLINE")
-        st.caption("Start local target website to test live attacks on your PC with zero AWS cost.")
-        if st.button("🚀 1-Click Launch Target Website", use_container_width=True):
-            import subprocess
-            target_script = BASE_DIR / "target_website.py"
-            try:
-                creation_flag = subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
-                subprocess.Popen(
-                    [sys.executable, str(target_script)],
-                    creationflags=creation_flag,
-                    stdout=subprocess.DEVNULL if os.name != "nt" else None,
-                    stderr=subprocess.DEVNULL if os.name != "nt" else None
-                )
-                st.success("Launching Apex Portal in background...")
-                time.sleep(2)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to launch: {e}")
-        st.code("python target_website.py", language="bash")
-
-    if infra_state.get("public_ip") and infra_state["public_ip"] != "PENDING":
-        st.markdown(f"**Cloud Target:** [http://{infra_state['public_ip']}](http://{infra_state['public_ip']})")
+        st.info("Target: http://localhost:5000")
 
     st.divider()
-    st.subheader("📡 Telemetry Ingestion Mode")
-    default_ingest_index = 1 if (LOCAL_FLOW_LOG_FILE.exists() and LOCAL_FLOW_LOG_FILE.stat().st_size > 0) else 0
+    st.subheader("📡 Telemetry Source")
     ingest_mode = st.radio(
-        "Source:",
-        ["🎮 Instant Demo Replay", "💻 Local Target Website (Port 5000)", "☁️ Live AWS S3 Polling"],
-        index=default_ingest_index,
+        "Ingestion Mode:",
+        ["☁️ Live AWS S3 Polling", "🎮 Instant Demo Replay"],
+        index=0,
         key="telemetry_ingest_mode"
     )
 
     st.divider()
-    st.subheader("⚡ Cloud Operations & Attacks")
+    st.subheader("⚡ Simulate Cyber Attacks")
+    st.caption("Fire attack bursts against the target to test real-time detection.")
 
-    if st.button("🚀 Deploy AWS Infra", use_container_width=True):
-        with st.spinner("Provisioning VPC, S3 Data Lake & EC2 Target Tier..."):
-            from scripts.deploy_aws_infra import deploy_infrastructure
-            try:
-                state = deploy_infrastructure()
-                st.success("Infrastructure deployed successfully!")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Deployment failed: {e}")
-
-    if st.button("💥 Simulate All Attack Scenarios", use_container_width=True):
-        with st.spinner("Generating DoS, PortScan, Brute Force, and Normal flows..."):
+    if st.button("💥 Run Full Attack Suite", use_container_width=True):
+        with st.spinner("Generating DoS, PortScan, and Brute Force flows..."):
             from scripts.simulate_traffic import run_all_simulations
             try:
                 run_all_simulations()
-                st.success("Simulation dispatched!")
+                st.success("Attacks dispatched!")
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
@@ -204,11 +144,11 @@ with st.sidebar:
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("🌊 DoS Flood", use_container_width=True):
+        if st.button("🌊 DoS SYN Flood", use_container_width=True):
             from scripts.simulate_traffic import simulate_syn_flood
             try:
                 simulate_syn_flood(num_packets=50)
-                st.success("DoS burst dispatched!")
+                st.success("DoS burst sent!")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as e:
@@ -218,7 +158,7 @@ with st.sidebar:
             from scripts.simulate_traffic import simulate_port_scan
             try:
                 simulate_port_scan()
-                st.success("Port scan dispatched!")
+                st.success("Port scan sent!")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as e:
@@ -229,23 +169,24 @@ with st.sidebar:
             from scripts.simulate_traffic import simulate_brute_force
             try:
                 simulate_brute_force(count=15)
-                st.success("Brute force dispatched!")
+                st.success("Brute force sent!")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as e:
                 st.error(str(e))
 
-        if st.button("✅ Normal Flow", use_container_width=True):
+        if st.button("✅ Normal Web Traffic", use_container_width=True):
             from scripts.simulate_traffic import simulate_normal_traffic
             try:
                 simulate_normal_traffic(count=15)
-                st.success("Benign flows dispatched!")
+                st.success("Benign flows sent!")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as e:
                 st.error(str(e))
 
-    if st.button("🗑️ 1-Click Teardown", type="secondary", use_container_width=True):
+    st.divider()
+    if st.button("🗑️ 1-Click AWS Teardown", type="secondary", use_container_width=True):
         with st.spinner("Tearing down all AWS resources cleanly..."):
             from scripts.cleanup_aws_infra import cleanup_infrastructure
             try:
@@ -264,37 +205,6 @@ def load_telemetry():
                 flows = json.load(f)
             return flows
         return []
-    elif ingest_mode == "💻 Local Target Website (Port 5000)":
-        flows = []
-        if LOCAL_FLOW_LOG_FILE.exists():
-            try:
-                with open(LOCAL_FLOW_LOG_FILE, "r", encoding="utf-8") as f:
-                    lines = [l.strip() for l in f if l.strip()]
-                    for line in lines[-200:]:
-                        rec = parse_flow_log_line(line)
-                        if rec:
-                            flows.append(rec)
-            except Exception:
-                pass
-
-        if not flows:
-            try:
-                resp = requests.get("http://127.0.0.1:5000/api/flow-logs?limit=100", timeout=1.0)
-                if resp.status_code == 200:
-                    raw_items = resp.json().get("flows", [])
-                    for item in raw_items:
-                        if "raw_line" in item:
-                            rec = parse_flow_log_line(item["raw_line"])
-                            if rec:
-                                flows.append(rec)
-            except Exception:
-                pass
-
-        if not flows and SAMPLE_FLOWS_FILE.exists():
-            st.info("Local honeypot log file is currently empty. Showing demo baseline flows. Dispatch traffic or launch target website to generate live flows!")
-            with open(SAMPLE_FLOWS_FILE, "r") as f:
-                flows = json.load(f)
-        return flows
     else:
         # S3 Live Ingestion
         bucket_name = infra_state.get("s3_bucket") or get_bucket_name()
@@ -303,7 +213,7 @@ def load_telemetry():
         s3 = session.client("s3", region_name=region)
         flows = []
         try:
-            objs = s3.list_objects_v2(Bucket=bucket_name, Prefix="vpc-flow-logs/", MaxKeys=10)
+            objs = s3.list_objects_v2(Bucket=bucket_name, Prefix="vpc-flow-logs/", MaxKeys=30)
             for item in objs.get("Contents", []):
                 if item["Key"].endswith(".gz"):
                     resp = s3.get_object(Bucket=bucket_name, Key=item["Key"])
@@ -338,11 +248,10 @@ else:
     X_features = pd.DataFrame()
 
 # Main Tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "🛡️ Real-Time SOC Monitor",
     "🧠 Explainable AI (TreeSHAP)",
-    "⚡ SOAR Active Remediation",
-    "💰 FinOps Cost Calculator"
+    "⚡ SOAR Active Remediation"
 ])
 
 # ==============================================================================
@@ -506,57 +415,3 @@ with tab3:
         st.dataframe(ledger_df[["timestamp", "action", "ip", "status", "operator", "mitre_technique", "tamper_evident_valid", "signature"]], use_container_width=True)
     else:
         st.info("No audit ledger events recorded yet.")
-
-# ==============================================================================
-# TAB 4: FINOPS CALCULATOR
-# ==============================================================================
-with tab4:
-    st.header("💰 FinOps Cost Optimization: Cloud Shield vs AWS GuardDuty")
-    st.markdown("Cost comparison for processing and analyzing enterprise VPC Flow Logs.")
-
-    col_f1, col_f2 = st.columns([1, 1])
-    with col_f1:
-        st.subheader("Fleet Configuration Parameters")
-        monthly_gb = st.slider("Monthly VPC Flow Log Volume (GB/month):", min_value=100, max_value=50000, value=5000, step=100)
-        num_vpcs = st.slider("Number of Protected VPCs:", min_value=1, max_value=50, value=5)
-        
-        # Calculations
-        # GuardDuty pricing for VPC Flow Logs:
-        # First 500 GB: $1.00/GB
-        # Next 2,000 GB (500 - 2,500): $0.50/GB
-        # Next 7,500 GB (2,500 - 10,000): $0.25/GB
-        # Over 10,000 GB: $0.15/GB
-        gd_cost = 0.0
-        if monthly_gb <= 500:
-            gd_cost = monthly_gb * 1.00
-        elif monthly_gb <= 2500:
-            gd_cost = 500 * 1.00 + (monthly_gb - 500) * 0.50
-        elif monthly_gb <= 10000:
-            gd_cost = 500 * 1.00 + 2000 * 0.50 + (monthly_gb - 2500) * 0.25
-        else:
-            gd_cost = 500 * 1.00 + 2000 * 0.50 + 7500 * 0.25 + (monthly_gb - 10000) * 0.15
-
-        # Cloud Shield pricing:
-        # S3 storage (1-day lifecycle): ~0.023 / GB / 30 = ~$0.0008 / GB
-        # Inference compute (AWS Lambda / t3.micro): ~$0.04 per GB processed
-        cs_cost = (monthly_gb * 0.0008) + (monthly_gb * 0.04) + 10.0 # base buffer
-
-        monthly_savings = max(gd_cost - cs_cost, 0.0)
-        annual_savings = monthly_savings * 12
-        savings_pct = (monthly_savings / gd_cost * 100) if gd_cost > 0 else 0.0
-
-    with col_f2:
-        st.subheader("Estimated Cost Comparison")
-        st.metric("AWS GuardDuty Monthly Cost", f"${gd_cost:,.2f}")
-        st.metric("Cloud Shield Monthly Cost", f"${cs_cost:,.2f}", delta=f"-{savings_pct:.1f}% reduction", delta_color="normal")
-        st.metric("Projected Annual Savings", f"${annual_savings:,.2f}")
-
-        # Comparison Bar
-        fig_cost, ax_cost = plt.subplots(figsize=(6, 3), facecolor="#0f172a")
-        ax_cost.set_facecolor("#0f172a")
-        bars = ax_cost.bar(["AWS GuardDuty", "Cloud Shield"], [gd_cost, cs_cost], color=["#ef4444", "#10b981"], width=0.5)
-        ax_cost.tick_params(colors="#e2e8f0", labelsize=10)
-        for spine in ax_cost.spines.values():
-            spine.set_color("#334155")
-        ax_cost.set_ylabel("Monthly Cost ($ USD)", color="#94a3b8")
-        st.pyplot(fig_cost)
