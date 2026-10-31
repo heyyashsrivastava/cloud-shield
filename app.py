@@ -6,6 +6,7 @@ import gzip
 import io
 from pathlib import Path
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -107,9 +108,95 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700;
     }
+    /* Hidden utility iframe styling */
+    div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+    iframe[height="0"] {
+        position: absolute !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        border: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Persistent Fullscreen State Tracker for Telemetry Stream
+components.html("""
+<script>
+(function() {
+    try {
+        const pDoc = window.parent.document;
+        const pWin = window.parent;
+
+        function getFsState() {
+            try {
+                const params = new URLSearchParams(pWin.location.search);
+                return pWin.sessionStorage.getItem('cs_telemetry_fs') === '1' || params.get('stream_fs') === '1';
+            } catch(e) {
+                return false;
+            }
+        }
+
+        function setFsState(active) {
+            try {
+                pWin.sessionStorage.setItem('cs_telemetry_fs', active ? '1' : '0');
+                const url = new URL(pWin.location);
+                if (active) {
+                    url.searchParams.set('stream_fs', '1');
+                    url.searchParams.set('stream_view', 'fullscreen');
+                } else {
+                    url.searchParams.delete('stream_fs');
+                    url.searchParams.delete('stream_view');
+                }
+                pWin.history.replaceState({}, '', url);
+            } catch(e) {}
+        }
+
+        function attemptRestore() {
+            if (!getFsState()) return true;
+            const closeBtn = pDoc.querySelector('button[aria-label="Close fullscreen"]');
+            if (closeBtn) return true;
+
+            const fsBtn = pDoc.querySelector('[data-testid="stDataFrame"] button[aria-label="Fullscreen"]');
+            if (fsBtn) {
+                fsBtn.click();
+                return true;
+            }
+            return false;
+        }
+
+        let attempts = 0;
+        const pollInterval = setInterval(() => {
+            attempts++;
+            if (attemptRestore() || attempts >= 35) {
+                clearInterval(pollInterval);
+            }
+        }, 120);
+
+        pDoc.addEventListener('click', function(e) {
+            const btn = e.target.closest('button[aria-label="Fullscreen"], button[aria-label="Close fullscreen"]');
+            if (btn) {
+                const label = btn.getAttribute('aria-label') || '';
+                if (label === 'Fullscreen') {
+                    setFsState(true);
+                } else if (label === 'Close fullscreen') {
+                    setFsState(false);
+                }
+            }
+        }, true);
+
+        pDoc.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                setFsState(false);
+            }
+        }, true);
+    } catch(err) {
+        console.warn('Fullscreen state tracker:', err);
+    }
+})();
+</script>
+""", height=0, width=0)
 
 @st.cache_resource
 def load_models_and_explainer():
@@ -396,11 +483,43 @@ if active_tab == "🛡️ Real-Time SOC Monitor":
             st.caption(f"Detections: **{bf_count}**")
 
     st.divider()
-    st.subheader("Live Telemetry & Alert Stream")
+    col_stream_head, col_stream_toggle = st.columns([3, 1])
+    with col_stream_head:
+        st.subheader("Live Telemetry & Alert Stream")
+    
+    with col_stream_toggle:
+        stream_is_fs = (st.query_params.get("stream_fs") == "1" or st.query_params.get("stream_view") == "fullscreen")
+        
+        def on_stream_view_toggle():
+            active_fs = st.session_state.get("telemetry_view_toggle", False)
+            if active_fs:
+                st.query_params["stream_view"] = "fullscreen"
+                st.query_params["stream_fs"] = "1"
+            else:
+                if "stream_view" in st.query_params:
+                    del st.query_params["stream_view"]
+                if "stream_fs" in st.query_params:
+                    del st.query_params["stream_fs"]
+
+        expanded_stream = st.toggle(
+            "⛶ Full Screen View",
+            value=stream_is_fs,
+            key="telemetry_view_toggle",
+            on_change=on_stream_view_toggle,
+            help="Expand Live Telemetry table to full screen height and persist state across browser refreshes."
+        )
+
     if total_flows > 0:
         display_df = meta_df[["srcaddr", "dstaddr", "srcport", "dstport", "action", "predicted_label", "mitre_technique", "severity", "confidence"]].copy()
         display_df["confidence"] = display_df["confidence"].apply(lambda x: f"{x*100:.1f}%")
-        st.dataframe(display_df, use_container_width=True, height=350)
+        
+        is_fullscreen_active = expanded_stream or stream_is_fs
+        table_height = 800 if is_fullscreen_active else 450
+        
+        if is_fullscreen_active:
+            st.caption("🖥️ **Full Screen View Active** (800px expanded viewport | Refreshing (F5) will maintain full screen)")
+            
+        st.dataframe(display_df, use_container_width=True, height=table_height)
     else:
         st.warning("No telemetry records found. Dispatch simulation or deploy infra.")
 
