@@ -57,27 +57,27 @@ LOG_LOCK = threading.Lock()
 MAX_RECENT_FLOWS = 200
 RECENT_FLOWS = []
 
-# Mock Transactions Database
+# Mock Transactions Database (Simple & Realistic Business Activity)
 TRANSACTIONS = [
-    {"id": "TX-90214", "recipient": "Quantum Cloud Services LLC", "amount": 128450.00, "currency": "USD", "status": "Settled", "timestamp": "2026-10-31 09:12:44", "type": "Vendor Settlement"},
-    {"id": "TX-90213", "recipient": "Apex European Clearing AG", "amount": 450000.00, "currency": "EUR", "status": "Settled", "timestamp": "2026-10-31 09:05:10", "type": "Interbank Wire"},
-    {"id": "TX-90212", "recipient": "CipherSec Threat Intelligence", "amount": 18200.00, "currency": "USD", "status": "Settled", "timestamp": "2026-10-31 08:44:21", "type": "Security Ops"},
-    {"id": "TX-90211", "recipient": "Starlight Capital Fund", "amount": 1250000.00, "currency": "USD", "status": "Settled", "timestamp": "2026-10-31 08:30:00", "type": "Treasury Allocation"},
-    {"id": "TX-90210", "recipient": "Delta Global Logistics", "amount": 42100.50, "currency": "USD", "status": "Settled", "timestamp": "2026-10-31 07:15:33", "type": "Supply Chain"},
-    {"id": "TX-90209", "recipient": "Tokyo Securities Corp", "amount": 890000.00, "currency": "JPY", "status": "Settled", "timestamp": "2026-10-31 06:50:18", "type": "Foreign Exchange"},
-    {"id": "TX-90208", "recipient": "Borealis Energy Infrastructure", "amount": 310500.00, "currency": "EUR", "status": "Settled", "timestamp": "2026-10-31 05:42:09", "type": "Commodity Settlement"},
-    {"id": "TX-90207", "recipient": "CloudFlare Edge CDN", "amount": 15400.00, "currency": "USD", "status": "Settled", "timestamp": "2026-10-31 04:18:22", "type": "Infrastructure"}
+    {"id": "TX-90214", "recipient": "Quantum Cloud Services LLC", "amount": 320.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 09:12:44", "type": "Cloud Hosting"},
+    {"id": "TX-90213", "recipient": "Apex Partner Clearing", "amount": 4850.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 09:05:10", "type": "Client Invoice"},
+    {"id": "TX-90212", "recipient": "Office Space & Utilities Co", "amount": 1200.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 08:44:21", "type": "Rent & Utilities"},
+    {"id": "TX-90211", "recipient": "Starlight Marketing Agency", "amount": 750.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 08:30:00", "type": "Marketing"},
+    {"id": "TX-90210", "recipient": "Global Hardware Supply Co", "amount": 640.50, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 07:15:33", "type": "Office Supplies"},
+    {"id": "TX-90209", "recipient": "Team Software Subscriptions", "amount": 210.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 06:50:18", "type": "Software & IT"},
+    {"id": "TX-90208", "recipient": "High-Speed Fiber Telecom", "amount": 95.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 05:42:09", "type": "Internet & Phone"},
+    {"id": "TX-90207", "recipient": "Domain & Web Security CDN", "amount": 45.00, "currency": "USD", "status": "Completed", "timestamp": "2026-10-31 04:18:22", "type": "Web Hosting"}
 ]
 
-# Account Metrics
+# Account Metrics (Simplified & Accessible)
 ACCOUNT_DATA = {
-    "organization": "Apex Global Financial Corp",
+    "organization": "Apex Business Account",
     "account_number": "ACT-8419-5502-001",
-    "primary_balance": 14289450.00,
-    "available_credit": 5000000.00,
+    "primary_balance": 24850.00,
+    "available_credit": 15000.00,
     "currency": "USD",
     "status": "ACTIVE_SECURE",
-    "security_profile": "Cloud Shield Tier 1 Shielding"
+    "security_profile": "Cloud Shield Protected"
 }
 
 def get_server_context():
@@ -686,7 +686,7 @@ LOGIN_PAGE_TEMPLATE = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Apex Financial | Secure Executive Login</title>
+    <title>Apex Global Finance | Secure Account Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-6">
@@ -698,7 +698,7 @@ LOGIN_PAGE_TEMPLATE = """
                 </div>
                 <div>
                     <h2 class="font-bold text-lg text-white">Apex Global Finance</h2>
-                    <p class="text-xs text-blue-400">Institutional Gateway</p>
+                    <p class="text-xs text-blue-400">Institutional Treasury Gateway</p>
                 </div>
             </div>
             <span class="px-2.5 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">TLS 1.3 Active</span>
@@ -713,22 +713,22 @@ LOGIN_PAGE_TEMPLATE = """
 
         <form action="/login" method="POST" class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Corporate Operator ID</label>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Corporate Username</label>
                 <input type="text" name="username" value="admin" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Security Token / Password</label>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
                 <input type="password" name="password" placeholder="••••••••••••" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
             </div>
             <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition shadow-lg shadow-blue-600/30">
-                Authenticate Session
+                Sign In
             </button>
         </form>
 
         <div class="mt-6 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
-            Protected by Cloud Shield Real-time NIDS. All failed attempts generate high-velocity telemetry for SOC analysis.
+            Protected by Cloud Shield Real-time NIDS. All failed attempts generate security telemetry for SOC analysis.
             <div class="mt-3">
-                <a href="/" class="text-blue-400 hover:underline">← Return to Portal Dashboard</a>
+                <a href="/" class="text-blue-400 hover:underline">← Return to Banking Dashboard</a>
             </div>
         </div>
     </div>
@@ -742,7 +742,7 @@ PORTAL_HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Global Financial | Enterprise Cloud Portal</title>
+    <title>Apex Global Financial | Online Banking Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -757,18 +757,18 @@ PORTAL_HTML_TEMPLATE = """
                 </div>
                 <div>
                     <span class="font-bold text-lg tracking-tight text-white">Apex Global Finance</span>
-                    <span class="text-xs block text-slate-400">Institutional Treasury & Liquidity Portal</span>
+                    <span class="text-xs block text-slate-400">Institutional Treasury & Online Banking</span>
                 </div>
             </div>
 
             <div class="flex items-center space-x-6 text-sm">
                 <div class="hidden lg:flex items-center space-x-2 text-xs text-slate-400">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Institutional Liquidity Node Active</span>
+                    <span>24/7 Security Active</span>
                 </div>
                 <div class="hidden md:flex items-center space-x-1 text-xs text-slate-400">
                     <i class="fa-solid fa-headset mr-1 text-blue-400"></i>
-                    <span>Desk: +1 (800) 555-APEX</span>
+                    <span>Support: 1-800-555-APEX</span>
                 </div>
                 <a href="/login" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-600/30 transition">
                     <i class="fa-solid fa-lock mr-1.5"></i> Client Sign In
@@ -779,38 +779,38 @@ PORTAL_HTML_TEMPLATE = """
 
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <!-- FINANCIAL KPI METRICS -->
+        <!-- FINANCIAL OVERVIEW METRICS -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Portfolio Balance</div>
                 <div class="text-2xl font-black text-white mt-2">${{ "{:,.2f}".format(account.primary_balance) }}</div>
-                <div class="text-xs text-emerald-400 mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +4.2% settlement delta</div>
+                <div class="text-xs text-emerald-400 mt-1"><i class="fa-solid fa-check-circle mr-1"></i> Available Checking Balance</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Available Fedwire Credit</div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Available Business Credit</div>
                 <div class="text-2xl font-black text-white mt-2">${{ "{:,.2f}".format(account.available_credit) }}</div>
-                <div class="text-xs text-slate-400 mt-1">SWIFT Direct Settlement Active</div>
+                <div class="text-xs text-slate-400 mt-1">Ready Reserve Line</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">24h Clearing Volume</div>
-                <div class="text-2xl font-black text-indigo-400 mt-2">$48,920,400.00</div>
-                <div class="text-xs text-emerald-400 mt-1"><i class="fa-solid fa-check-circle mr-1"></i> 100% On-Time Clearing</div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Monthly Spending</div>
+                <div class="text-2xl font-black text-indigo-400 mt-2">$3,305.50</div>
+                <div class="text-xs text-emerald-400 mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i> 8 Recent Transactions</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Regulatory Reserve Tier</div>
-                <div class="text-xl font-black text-emerald-400 mt-2">Tier 1 Prime Facility</div>
-                <div class="text-xs text-slate-400 mt-1">Basel III Capital Compliant</div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Account Security Status</div>
+                <div class="text-xl font-black text-emerald-400 mt-2">Active & Protected</div>
+                <div class="text-xs text-slate-400 mt-1">Cloud Shield Real-Time Inspection</div>
             </div>
         </div>
 
-        <!-- TRANSACTIONS & WIRE TRANSFER SECTION -->
+        <!-- TRANSACTIONS & TRANSFER SECTION -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Transaction Ledger -->
             <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h3 class="font-bold text-lg text-white">Institutional Clearing Ledger</h3>
-                        <p class="text-xs text-slate-400">Real-time interbank transaction search & audit records</p>
+                        <h3 class="font-bold text-lg text-white">Recent Payments & Clearing Ledger</h3>
+                        <p class="text-xs text-slate-400">Search recent incoming and outgoing payments</p>
                     </div>
                     <div class="relative">
                         <input type="text" id="tx-search" placeholder="Search payee or TX ID..." onkeyup="filterTransactions()" class="bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-56">
@@ -848,31 +848,32 @@ PORTAL_HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <!-- Initiate Wire Transfer Card -->
+            <!-- Quick Transfer Card -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
                 <div>
-                    <h3 class="font-bold text-lg text-white mb-1">Initiate Wire Settlement</h3>
-                    <p class="text-xs text-slate-400 mb-6">Dispatches authenticated SWIFT payment order</p>
+                    <h3 class="font-bold text-lg text-white mb-1">Quick Transfer & Settlement</h3>
+                    <p class="text-xs text-slate-400 mb-6">Send payment to vendor, supplier, or partner</p>
                     
                     <form id="transfer-form" onsubmit="submitWire(event)" class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Beneficiary Payee</label>
-                            <input type="text" id="wire-recipient" required placeholder="e.g. Zurich Securities Corp" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <input type="text" id="wire-recipient" required placeholder="e.g. Acme Supplies or John Doe" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Transfer Amount (USD)</label>
-                            <input type="number" id="wire-amount" required min="100" step="50" placeholder="50000" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <input type="number" id="wire-amount" required min="10" step="10" placeholder="500" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Settlement Route</label>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Payment Purpose</label>
                             <select id="wire-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
-                                <option value="SWIFT Fedwire Direct">SWIFT Fedwire Direct (Instant)</option>
-                                <option value="Commercial Treasury Wire">Commercial Treasury Wire</option>
-                                <option value="Interbank Liquidity">Interbank Liquidity Clearing</option>
+                                <option value="Vendor / Supplier Payment">Vendor / Supplier Payment</option>
+                                <option value="Operational Utilities">Operational Utilities & Services</option>
+                                <option value="Contractor Invoice">Contractor Invoice</option>
+                                <option value="General Business Transfer">General Business Transfer</option>
                             </select>
                         </div>
                         <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-indigo-600/30">
-                            Execute Wire Settlement
+                            Execute Transfer
                         </button>
                     </form>
                     <div id="transfer-status" class="mt-3 hidden text-xs p-2 rounded"></div>
@@ -885,34 +886,34 @@ PORTAL_HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- INSTITUTIONAL SERVICES FOOTER BANNER -->
+        <!-- ONLINE BANKING SERVICES FOOTER -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
             <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
                 <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center mb-3">
-                    <i class="fa-solid fa-globe"></i>
+                    <i class="fa-solid fa-bolt"></i>
                 </div>
-                <h4 class="text-sm font-bold text-white">Cross-Border Settlement</h4>
-                <p class="text-xs text-slate-400 mt-1">Direct bilateral Fedwire, CHIPS, and Target2 liquidity clearing across 42 currency corridors.</p>
+                <h4 class="text-sm font-bold text-white">Instant Online Transfers</h4>
+                <p class="text-xs text-slate-400 mt-1">Send and receive payments securely with fast digital settlement across your business accounts.</p>
             </div>
             <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
                 <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-3">
-                    <i class="fa-solid fa-building-columns"></i>
+                    <i class="fa-solid fa-receipt"></i>
                 </div>
-                <h4 class="text-sm font-bold text-white">Institutional Custody</h4>
-                <p class="text-xs text-slate-400 mt-1">Segregated cold and warm treasury vault architecture with real-time liquidity rebalancing.</p>
+                <h4 class="text-sm font-bold text-white">Expense Tracking</h4>
+                <p class="text-xs text-slate-400 mt-1">Keep track of daily business expenses, vendor invoices, and outgoing settlements in one place.</p>
             </div>
             <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
-                <h4 class="text-sm font-bold text-white">Zero-Trust Protocol</h4>
-                <p class="text-xs text-slate-400 mt-1">Multi-signatory quorum authorizations and behavioral transport inspection protecting wire pipelines.</p>
+                <h4 class="text-sm font-bold text-white">Cloud Shield Defense</h4>
+                <p class="text-xs text-slate-400 mt-1">Enterprise AI network intrusion detection monitoring traffic for malicious attacks 24/7.</p>
             </div>
         </div>
     </main>
 
     <footer class="border-t border-slate-900 mt-12 py-6 text-center text-xs text-slate-500">
-        <p>© 2026 Apex Global Financial Corp. Institutional Treasury Member FINRA & SIPC. Regulated by the Federal Reserve.</p>
+        <p>© 2026 Apex Global Finance Corp. Protected by Cloud Shield Security Platform.</p>
     </footer>
 
     <script>
