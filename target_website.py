@@ -762,58 +762,22 @@ PORTAL_HTML_TEMPLATE = """
             </div>
 
             <div class="flex items-center space-x-6 text-sm">
-                <div class="flex items-center space-x-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium">
+                <div class="hidden lg:flex items-center space-x-2 text-xs text-slate-400">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Honeypot Active (Port {{ port }})</span>
+                    <span>Institutional Liquidity Node Active</span>
                 </div>
-                <div class="text-xs text-slate-400 hidden md:block">
-                    AWS VPC: <code class="text-blue-400 font-mono">{{ vpc_id }}</code>
+                <div class="hidden md:flex items-center space-x-1 text-xs text-slate-400">
+                    <i class="fa-solid fa-headset mr-1 text-blue-400"></i>
+                    <span>Desk: +1 (800) 555-APEX</span>
                 </div>
-                <a href="/login" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition">
-                    <i class="fa-solid fa-lock mr-1.5"></i> Admin Login
-                </a>
-                <a href="http://localhost:8501" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-600/30 transition">
-                    <i class="fa-solid fa-shield-halved mr-1.5"></i> Streamlit SOC
+                <a href="/login" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-600/30 transition">
+                    <i class="fa-solid fa-lock mr-1.5"></i> Client Sign In
                 </a>
             </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
-
-        <!-- ATTACK SIMULATION CYBER RANGE BANNER -->
-        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-            <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
-                <i class="fa-solid fa-crosshairs text-9xl text-indigo-400"></i>
-            </div>
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div>
-                    <div class="inline-flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>Live Cyber Range Simulation Controls</span>
-                    </div>
-                    <h2 class="text-2xl font-extrabold text-white">Target Honeypot Attack Generator</h2>
-                    <p class="text-sm text-slate-300 max-w-2xl mt-1">
-                        Trigger real cyber attack flows against this portal. Compliant AWS VPC Flow Log v5 records are generated instantaneously and stream directly into the Streamlit SOC Monitor.
-                    </p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <button onclick="fireAttack('dos')" class="px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition flex items-center shadow-lg shadow-red-600/30">
-                        <i class="fa-solid fa-water mr-2"></i> Fire DoS Flood (T1498)
-                    </button>
-                    <button onclick="fireAttack('bruteforce')" class="px-4 py-2.5 bg-purple-600/90 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition flex items-center shadow-lg shadow-purple-600/30">
-                        <i class="fa-solid fa-key mr-2"></i> Fire Brute Force (T1110)
-                    </button>
-                    <button onclick="fireAttack('portscan')" class="px-4 py-2.5 bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition flex items-center shadow-lg shadow-amber-600/30">
-                        <i class="fa-solid fa-radar mr-2"></i> Fire Port Scan (T1046)
-                    </button>
-                    <button onclick="fireAttack('normal')" class="px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center shadow-lg shadow-emerald-600/30">
-                        <i class="fa-solid fa-check mr-2"></i> Send Benign Flow
-                    </button>
-                </div>
-            </div>
-            <div id="sim-feedback" class="mt-4 hidden p-3 rounded-lg text-xs font-mono"></div>
-        </div>
 
         <!-- FINANCIAL KPI METRICS -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -828,16 +792,14 @@ PORTAL_HTML_TEMPLATE = """
                 <div class="text-xs text-slate-400 mt-1">SWIFT Direct Settlement Active</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Cloud Shield SOAR Guard</div>
-                <div class="text-2xl font-black text-emerald-400 mt-2">ENFORCED</div>
-                <div class="text-xs text-slate-400 mt-1">
-                    Quarantined Attacker IPs: <span class="text-red-400 font-bold" id="quarantine-count">{{ quarantined_ips|length }}</span>
-                </div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">24h Clearing Volume</div>
+                <div class="text-2xl font-black text-indigo-400 mt-2">$48,920,400.00</div>
+                <div class="text-xs text-emerald-400 mt-1"><i class="fa-solid fa-check-circle mr-1"></i> 100% On-Time Clearing</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Target Endpoint Host</div>
-                <div class="text-xl font-black text-indigo-400 mt-2 truncate">{{ server_ip }}:{{ port }}</div>
-                <div class="text-xs text-slate-400 mt-1">Telemetry: AWS v5 Log Bridge</div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Regulatory Reserve Tier</div>
+                <div class="text-xl font-black text-emerald-400 mt-2">Tier 1 Prime Facility</div>
+                <div class="text-xs text-slate-400 mt-1">Basel III Capital Compliant</div>
             </div>
         </div>
 
@@ -918,64 +880,42 @@ PORTAL_HTML_TEMPLATE = """
 
                 <div class="mt-6 pt-4 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
                     <span>MFA Verified Session</span>
-                    <span class="text-emerald-400"><i class="fa-solid fa-lock mr-1"></i> 256-bit Encrypted</span>
+                    <span class="text-emerald-400"><i class="fa-solid fa-lock mr-1"></i> 256-bit TLS Encrypted</span>
                 </div>
             </div>
         </div>
 
-        <!-- REAL-TIME VPC FLOW LOG TELEMETRY CONSOLE -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center space-x-3">
-                    <div class="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20">
-                        <i class="fa-solid fa-terminal text-sm"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-sm text-white">Live AWS VPC Flow Log v5 Telemetry Stream</h3>
-                        <p class="text-xs text-slate-400">Captured packet records generated by this honeypot web server</p>
-                    </div>
+        <!-- INSTITUTIONAL SERVICES FOOTER BANNER -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-globe"></i>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="refreshFlowLogs()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium border border-slate-700 transition">
-                        <i class="fa-solid fa-rotate mr-1"></i> Refresh
-                    </button>
-                    <button onclick="clearLogs()" class="px-3 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 rounded text-xs font-medium border border-red-800/40 transition">
-                        <i class="fa-solid fa-trash mr-1"></i> Clear
-                    </button>
-                </div>
+                <h4 class="text-sm font-bold text-white">Cross-Border Settlement</h4>
+                <p class="text-xs text-slate-400 mt-1">Direct bilateral Fedwire, CHIPS, and Target2 liquidity clearing across 42 currency corridors.</p>
             </div>
-
-            <div class="bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-xs overflow-x-auto max-h-56 overflow-y-auto" id="flow-log-terminal">
-                <div class="text-slate-500 italic">Streaming AWS VPC Flow Log v5 records...</div>
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h4 class="text-sm font-bold text-white">Institutional Custody</h4>
+                <p class="text-xs text-slate-400 mt-1">Segregated cold and warm treasury vault architecture with real-time liquidity rebalancing.</p>
+            </div>
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h4 class="text-sm font-bold text-white">Zero-Trust Protocol</h4>
+                <p class="text-xs text-slate-400 mt-1">Multi-signatory quorum authorizations and behavioral transport inspection protecting wire pipelines.</p>
             </div>
         </div>
     </main>
 
-    <!-- Client-side Interactive Logic -->
+    <footer class="border-t border-slate-900 mt-12 py-6 text-center text-xs text-slate-500">
+        <p>© 2026 Apex Global Financial Corp. Institutional Treasury Member FINRA & SIPC. Regulated by the Federal Reserve.</p>
+    </footer>
+
     <script>
-        async function fireAttack(type) {
-            const fb = document.getElementById("sim-feedback");
-            fb.classList.remove("hidden");
-            fb.className = "mt-4 p-3 rounded-lg text-xs font-mono bg-blue-950/60 border border-blue-500/40 text-blue-300";
-            fb.innerText = `[~] Dispatching ${type.toUpperCase()} attack flow bursts...`;
-
-            try {
-                const res = await fetch(`/simulate/${type}`, { method: "POST" });
-                const data = await res.json();
-                if (data.status === "SUCCESS") {
-                    fb.className = "mt-4 p-3 rounded-lg text-xs font-mono bg-emerald-950/60 border border-emerald-500/40 text-emerald-300";
-                    fb.innerHTML = `[✓] Generated ${data.records_generated} AWS VPC Flow Log v5 records for <b>${type.toUpperCase()}</b>! View detection live in Streamlit SOC.`;
-                    refreshFlowLogs();
-                } else {
-                    fb.className = "mt-4 p-3 rounded-lg text-xs font-mono bg-red-950/60 border border-red-500/40 text-red-300";
-                    fb.innerText = `[!] Simulation failed: ${JSON.stringify(data)}`;
-                }
-            } catch (err) {
-                fb.className = "mt-4 p-3 rounded-lg text-xs font-mono bg-red-950/60 border border-red-500/40 text-red-300";
-                fb.innerText = `[!] Network error: ${err.message}`;
-            }
-        }
-
         async function submitWire(e) {
             e.preventDefault();
             const recipient = document.getElementById("wire-recipient").value;
@@ -1011,36 +951,6 @@ PORTAL_HTML_TEMPLATE = """
                 row.style.display = text.includes(query) ? "" : "none";
             });
         }
-
-        async function refreshFlowLogs() {
-            const terminal = document.getElementById("flow-log-terminal");
-            try {
-                const res = await fetch("/api/flow-logs?limit=20");
-                const data = await res.json();
-                if (data.flows && data.flows.length > 0) {
-                    terminal.innerHTML = data.flows.map(f => {
-                        let badgeClass = "text-emerald-400";
-                        if (f.action === "REJECT") badgeClass = "text-red-400 font-bold";
-                        else if (f.packets > 500) badgeClass = "text-amber-400 font-bold";
-                        return `<div class="py-0.5 border-b border-slate-900 flex justify-between"><span class="text-slate-500">${f.timestamp}</span> <span class="text-slate-300 font-mono">${f.raw_line}</span> <span class="${badgeClass}">${f.action}</span></div>`;
-                    }).join("");
-                    terminal.scrollTop = terminal.scrollHeight;
-                } else {
-                    terminal.innerHTML = '<div class="text-slate-500 italic">No flow logs recorded yet. Click one of the simulation buttons above to fire traffic!</div>';
-                }
-            } catch (e) {
-                console.error("Failed to load flow logs", e);
-            }
-        }
-
-        async function clearLogs() {
-            await fetch("/api/clear-logs", { method: "POST" });
-            refreshFlowLogs();
-        }
-
-        // Auto-refresh logs every 4 seconds
-        setInterval(refreshFlowLogs, 4000);
-        refreshFlowLogs();
     </script>
 </body>
 </html>
