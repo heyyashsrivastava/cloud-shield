@@ -91,7 +91,7 @@ def get_server_context():
                 st = json.load(f)
                 account_id = st.get("account_id", account_id)
                 vpc_id = st.get("vpc_id", vpc_id)
-                server_ip = st.get("public_ip", server_ip)
+                server_ip = st.get("private_ip") or st.get("public_ip", server_ip)
         except Exception:
             pass
     return account_id, vpc_id, server_ip
@@ -124,6 +124,13 @@ def record_flow_log(
         try:
             with open(LOCAL_FLOW_LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
+            # Rotate if log exceeds 5MB to avoid disk bloat
+            if LOCAL_FLOW_LOG_FILE.stat().st_size > 5 * 1024 * 1024:
+                with open(LOCAL_FLOW_LOG_FILE, "r", encoding="utf-8") as f:
+                    all_lines = f.readlines()
+                if len(all_lines) > 2000:
+                    with open(LOCAL_FLOW_LOG_FILE, "w", encoding="utf-8") as f:
+                        f.writelines(all_lines[-2000:])
         except Exception as e:
             print(f"[!] Warning: failed to write to flow log file: {e}", file=sys.stderr)
 
@@ -154,13 +161,59 @@ def record_flow_log(
 
     return line
 
+# --- Performance Quarantine Cache ---
+_QUARANTINE_CACHE = {"mtime": 0.0, "ips": set()}
+_CACHE_LOCK = threading.Lock()
+
+def get_cached_quarantined_ips() -> set[str]:
+    """Derive quarantined IPs with mtime caching to avoid repeated full HMAC verifications."""
+    with _CACHE_LOCK:
+        try:
+            audit_file = AUDIT_LOG_FILE if 'AUDIT_LOG_FILE' in globals() else DATA_DIR / "soar_audit.jsonl"
+            mtime = audit_file.stat().st_mtime if audit_file.exists() else 0.0
+            if mtime != _QUARANTINE_CACHE["mtime"]:
+                _QUARANTINE_CACHE["mtime"] = mtime
+                _QUARANTINE_CACHE["ips"] = get_quarantined_ips()
+        except Exception:
+            _QUARANTINE_CACHE["ips"] = get_quarantined_ips()
+        return _QUARANTINE_CACHE["ips"]
+
+# --- Dynamic Request Velocity Tracking for Live DoS Bursts ---
+_IP_REQUEST_HISTORY: dict[str, list[float]] = {}
+_HISTORY_LOCK = threading.Lock()
+
+def record_ip_request_and_check_burst(ip: str, window_sec: float = 2.0, burst_threshold: int = 6) -> bool:
+    """Record request timestamp for IP and return True if request rate constitutes a high-velocity DoS burst."""
+    now = time.time()
+    with _HISTORY_LOCK:
+        history = _IP_REQUEST_HISTORY.get(ip, [])
+        history = [t for t in history if now - t < window_sec]
+        history.append(now)
+        _IP_REQUEST_HISTORY[ip] = history
+        if len(_IP_REQUEST_HISTORY) > 500:
+            for k in list(_IP_REQUEST_HISTORY.keys()):
+                if not _IP_REQUEST_HISTORY[k] or now - _IP_REQUEST_HISTORY[k][-1] > 10.0:
+                    del _IP_REQUEST_HISTORY[k]
+        return len(history) >= burst_threshold
+
+RECON_SCAN_PATHS = {
+    "/.env", "/.git", "/.git/config", "/wp-admin", "/wp-login.php",
+    "/actuator", "/actuator/health", "/phpmyadmin", "/console",
+    "/swagger-ui", "/swagger-ui.html", "/api/swagger", "/.aws/credentials"
+}
+
 def get_client_ip(req):
     """Detect client IP, honoring simulated attacker headers if present."""
     if req.headers.get("X-Attacker-IP"):
-        return req.headers.get("X-Attacker-IP").strip()
-    if req.headers.get("X-Forwarded-For"):
-        return req.headers.get("X-Forwarded-For").split(",")[0].strip()
-    return req.remote_addr or "127.0.0.1"
+        ip = req.headers.get("X-Attacker-IP").strip()
+    elif req.headers.get("X-Forwarded-For"):
+        ip = req.headers.get("X-Forwarded-For").split(",")[0].strip()
+    else:
+        ip = req.remote_addr or "127.0.0.1"
+
+    if ip == "::1":
+        ip = "127.0.0.1"
+    return ip
 
 # --- Request Interceptor for SOAR Active Quarantine & Telemetry ---
 @app.before_request
@@ -178,8 +231,8 @@ def check_soar_defense_and_log():
         target_port = 5000
 
     # 1. SOAR ACTIVE QUARANTINE ENFORCEMENT
-    quarantined = get_quarantined_ips()
-    if client_ip in quarantined:
+    quarantined = get_cached_quarantined_ips()
+    if client_ip in quarantined and not is_ip_allowlisted(client_ip):
         # Client IP has been quarantined by SOAR!
         record_flow_log(
             srcaddr=client_ip,
@@ -195,23 +248,98 @@ def check_soar_defense_and_log():
         )
         return render_template_string(BLOCK_PAGE_TEMPLATE, ip=client_ip), 403
 
-    # 2. TELEMETRY LOGGING FOR BENIGN REQUESTS
-    # Normal incoming requests generate standard benign flows unless part of a dedicated attack simulation
-    if not request.path.startswith("/simulate"):
-        packets = random.randint(12, 35)
-        bytes_count = packets * random.randint(500, 950)
+    # Do not double-log for dedicated simulation endpoints
+    if request.path.startswith("/simulate"):
+        return
+
+    # Check for Recon/Scanner endpoints
+    if request.path in RECON_SCAN_PATHS or request.path.startswith("/.env") or request.path.startswith("/.git"):
         record_flow_log(
             srcaddr=client_ip,
             dstaddr=server_ip,
-            srcport=random.randint(40000, 62000),
+            srcport=random.randint(40000, 65000),
             dstport=target_port,
-            packets=packets,
-            bytes_count=bytes_count,
-            tcp_flags=27,  # SYN+ACK+PSH
+            packets=random.choice([1, 2]),
+            bytes_count=random.randint(48, 96),
+            tcp_flags=2,  # SYN flag only
+            action="REJECT",
+            protocol=6,
+            duration=0
+        )
+        return jsonify({"status": "REJECTED", "error": "Reconnaissance probe detected and blocked."}), 404
+
+    # Check explicit simulated attack headers
+    attack_header = request.headers.get("X-Attack-Type", "").strip().lower()
+    if attack_header in ("dos", "dos_syn", "syn_flood"):
+        pkt_count = random.randint(1200, 3500)
+        byte_count = pkt_count * random.randint(40, 54)
+        record_flow_log(
+            srcaddr=client_ip,
+            dstaddr=server_ip,
+            srcport=random.randint(1024, 65535),
+            dstport=target_port,
+            packets=pkt_count,
+            bytes_count=byte_count,
+            tcp_flags=2,  # SYN flag only
             action="ACCEPT",
             protocol=6,
-            duration=1
+            duration=random.randint(0, 2)
         )
+        return
+
+    if attack_header in ("portscan", "port_scan", "scan"):
+        record_flow_log(
+            srcaddr=client_ip,
+            dstaddr=server_ip,
+            srcport=random.randint(40000, 65000),
+            dstport=target_port,
+            packets=random.choice([1, 2]),
+            bytes_count=random.randint(48, 96),
+            tcp_flags=2,  # SYN flag only
+            action="REJECT",
+            protocol=6,
+            duration=0
+        )
+        return
+
+    # POST /login handles its own telemetry (avoids duplicate/false benign flow)
+    if request.path == "/login" and request.method == "POST":
+        return
+
+    # Dynamic Request Velocity Tracking for Live Traffic (DoS Bursts)
+    is_burst = record_ip_request_and_check_burst(client_ip)
+    if is_burst:
+        pkt_count = random.randint(1200, 3500)
+        byte_count = pkt_count * random.randint(40, 54)
+        record_flow_log(
+            srcaddr=client_ip,
+            dstaddr=server_ip,
+            srcport=random.randint(1024, 65535),
+            dstport=target_port,
+            packets=pkt_count,
+            bytes_count=byte_count,
+            tcp_flags=2,  # SYN flag only
+            action="ACCEPT",
+            protocol=6,
+            duration=random.randint(0, 2)
+        )
+        return
+
+    # 2. TELEMETRY LOGGING FOR BENIGN REQUESTS
+    packets = random.randint(12, 35)
+    bytes_count = packets * random.randint(500, 950)
+    record_flow_log(
+        srcaddr=client_ip,
+        dstaddr=server_ip,
+        srcport=random.randint(40000, 62000),
+        dstport=target_port,
+        packets=packets,
+        bytes_count=bytes_count,
+        tcp_flags=27,  # SYN+ACK+PSH
+        action="ACCEPT",
+        protocol=6,
+        duration=1
+    )
 
 # --- WEB PORTAL ROUTES ---
 
@@ -219,7 +347,12 @@ def check_soar_defense_and_log():
 @app.route("/dashboard")
 def dashboard():
     account_id, vpc_id, server_ip = get_server_context()
-    quarantined = list(get_quarantined_ips())
+    quarantined = list(get_cached_quarantined_ips())
+    target_port = request.environ.get("SERVER_PORT", 5000)
+    try:
+        target_port = int(target_port)
+    except Exception:
+        target_port = 5000
     return render_template_string(
         PORTAL_HTML_TEMPLATE,
         account=ACCOUNT_DATA,
@@ -228,14 +361,18 @@ def dashboard():
         vpc_id=vpc_id,
         account_id=account_id,
         quarantined_ips=quarantined,
-        port=request.environ.get("SERVER_PORT", 5000)
+        port=target_port
     )
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     client_ip = get_client_ip(request)
     _, _, server_ip = get_server_context()
-    target_port = int(request.environ.get("SERVER_PORT", 5000))
+    target_port = request.environ.get("SERVER_PORT", 5000)
+    try:
+        target_port = int(target_port)
+    except Exception:
+        target_port = 5000
 
     if request.method == "POST":
         data = request.form if request.form else (request.get_json(silent=True) or {})
@@ -244,6 +381,18 @@ def login():
 
         # Valid mock credentials
         if username == "admin" and password == "ApexSecure2026!":
+            record_flow_log(
+                srcaddr=client_ip,
+                dstaddr=server_ip,
+                srcport=random.randint(45000, 65000),
+                dstport=target_port,
+                packets=random.randint(20, 40),
+                bytes_count=random.randint(3000, 8000),
+                tcp_flags=27,  # SYN+ACK+PSH
+                action="ACCEPT",
+                protocol=6,
+                duration=1
+            )
             return jsonify({"status": "SUCCESS", "message": "Authentication successful. Welcome, Corporate Administrator."})
         else:
             # Failed authentication (Credential Guessing / Brute Force signature)
@@ -325,12 +474,17 @@ def contact():
 
 @app.route("/api/health", methods=["GET"])
 def health():
+    target_port = request.environ.get("SERVER_PORT", 5000)
+    try:
+        target_port = int(target_port)
+    except Exception:
+        target_port = 5000
     return jsonify({
         "status": "UP",
         "service": "Apex Financial Portal",
         "honeypot_telemetry": "AWS VPC Flow Log v5 Bridge ACTIVE",
-        "active_port": request.environ.get("SERVER_PORT", 5000),
-        "quarantined_ips_count": len(get_quarantined_ips()),
+        "active_port": target_port,
+        "quarantined_ips_count": len(get_cached_quarantined_ips()),
         "timestamp": int(time.time())
     })
 

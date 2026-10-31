@@ -301,10 +301,21 @@ def deploy_infrastructure():
 
     user_data_script = f"""#!/bin/bash
 dnf update -y || yum update -y
-dnf install -y python3-pip httpd || yum install -y python3-pip httpd
-pip3 install flask
+dnf install -y python3-flask python3-pip httpd || yum install -y python3-flask python3-pip httpd || true
+python3 -m pip install --break-system-packages flask || pip3 install flask || true
+
+# Ensure port 80 is free for apex-portal
+systemctl stop httpd 2>/dev/null || true
+systemctl disable httpd 2>/dev/null || true
 
 mkdir -p /opt/cloudshield/data
+
+cat << 'EOF_STATE' > /opt/cloudshield/infra_state.json
+{{
+  "account_id": "{account_id}",
+  "vpc_id": "{vpc_id}"
+}}
+EOF_STATE
 
 cat << 'EOF_B64' | base64 -d > /opt/cloudshield/target_website.py
 {target_code_b64}

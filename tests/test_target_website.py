@@ -6,8 +6,8 @@ from pathlib import Path
 
 # Add project root
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from target_website import app, record_flow_log
-from config import LOCAL_FLOW_LOG_FILE, MODELS_DIR, LABEL_NAMES
+from target_website import app, record_flow_log, get_cached_quarantined_ips
+from config import LOCAL_FLOW_LOG_FILE, MODELS_DIR, LABEL_NAMES, IMMUTABLE_ALLOWLIST
 from ml.feature_extraction import (
     parse_flow_log_line, transform_flow_logs, assert_zero_ip_leakage
 )
@@ -188,3 +188,99 @@ def test_attack_simulation_endpoints_and_model_classification(client):
     assert "PortScan" in predicted_labels
     assert "BruteForce" in predicted_labels
     assert "BENIGN" in predicted_labels
+
+def test_attack_headers_telemetry(client):
+    """Verify that incoming requests with X-Attack-Type headers are accurately recorded as attacks."""
+    client.post("/api/clear-logs")
+
+    # 1. DoS header
+    client.get("/api/v1/transactions", headers={"X-Attacker-IP": "203.0.113.88", "X-Attack-Type": "DoS"})
+    res = client.get("/api/flow-logs?limit=5")
+    flows = res.get_json()["flows"]
+    assert len(flows) >= 1
+    last_flow = flows[-1]
+    assert last_flow["srcaddr"] == "203.0.113.88"
+    assert last_flow["tcp_flags"] == 2
+    assert last_flow["packets"] >= 1000
+
+    # 2. PortScan header
+    client.get("/", headers={"X-Attacker-IP": "198.51.100.44", "X-Attack-Type": "PortScan"})
+    res = client.get("/api/flow-logs?limit=5")
+    flows = res.get_json()["flows"]
+    scan_flow = flows[-1]
+    assert scan_flow["srcaddr"] == "198.51.100.44"
+    assert scan_flow["action"] == "REJECT"
+    assert scan_flow["tcp_flags"] == 2
+
+def test_no_duplicate_benign_flows_on_failed_login(client):
+    """Verify that a failed login generates strictly one flow log (BruteForce) and NO benign flow."""
+    client.post("/api/clear-logs")
+
+    client.post(
+        "/login",
+        json={"username": "admin", "password": "wrongpassword999"},
+        headers={"X-Attacker-IP": "185.220.101.99"}
+    )
+
+    res = client.get("/api/flow-logs?limit=10")
+    flows = res.get_json()["flows"]
+    assert len(flows) == 1, f"Expected exactly 1 flow log, got {len(flows)}"
+    assert flows[0]["srcaddr"] == "185.220.101.99"
+    assert flows[0]["tcp_flags"] == 24  # PSH+ACK BruteForce
+    assert flows[0]["action"] == "ACCEPT"
+
+def test_velocity_dos_burst_detection(client):
+    """Verify that high-velocity bursts from a single IP automatically trigger DoS SYN flow generation."""
+    client.post("/api/clear-logs")
+    burst_ip = "198.51.100.210"
+
+    # Fire 8 rapid requests without attack headers
+    for _ in range(8):
+        client.get("/api/v1/transactions", headers={"X-Attacker-IP": burst_ip})
+
+    res = client.get("/api/flow-logs?limit=15")
+    flows = res.get_json()["flows"]
+    assert len(flows) >= 8
+
+    # The later flows in the burst must have transitioned to DoS SYN telemetry
+    burst_flows = [f for f in flows if f["srcaddr"] == burst_ip and f["tcp_flags"] == 2 and f["packets"] >= 1000]
+    assert len(burst_flows) > 0, "Velocity burst should have triggered DoS SYN flow generation"
+
+def test_recon_scan_probe(client):
+    """Verify that reconnaissance probes to sensitive scanner paths return 404 and log PortScan REJECT flows."""
+    client.post("/api/clear-logs")
+    scan_ip = "198.51.100.33"
+
+    res = client.get("/.env", headers={"X-Attacker-IP": scan_ip})
+    assert res.status_code == 404
+
+    res2 = client.get("/wp-admin", headers={"X-Attacker-IP": scan_ip})
+    assert res2.status_code == 404
+
+    logs = client.get("/api/flow-logs?limit=10").get_json()["flows"]
+    assert len(logs) == 2
+    for l in logs:
+        assert l["srcaddr"] == scan_ip
+        assert l["action"] == "REJECT"
+        assert l["tcp_flags"] == 2
+
+def test_quarantine_caching_and_allowlist_immunity(client):
+    """Verify cached quarantine lookup works and that allowlisted IPs are never blocked."""
+    # 1. Allowlisted IP should never be blocked
+    res_allow = client.get("/", headers={"X-Attacker-IP": "127.0.0.1"})
+    assert res_allow.status_code == 200
+
+    # 2. Cached quarantined set
+    cached = get_cached_quarantined_ips()
+    assert isinstance(cached, set)
+
+def test_deploy_aws_infra_userdata_resilience():
+    """Verify that EC2 UserData script includes required resilience directives."""
+    from scripts import deploy_aws_infra
+    import inspect
+
+    src = inspect.getsource(deploy_aws_infra.deploy_infrastructure)
+    assert "apex-portal.service" in src
+    assert "systemctl stop httpd" in src
+    assert "break-system-packages" in src
+    assert "python3-flask" in src

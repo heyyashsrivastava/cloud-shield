@@ -363,7 +363,8 @@ def run_all_simulations(target_ip_or_url: str = None):
     simulate_syn_flood(base_url, target_port=port, num_packets=40)
     simulate_brute_force(base_url, count=12)
 
-    if STATE_FILE.exists():
+    is_local = "127.0.0.1" in host or "localhost" in host
+    if not is_local and STATE_FILE.exists():
         inject_s3_flow_logs("ALL")
 
     print("\n" + "=" * 72)

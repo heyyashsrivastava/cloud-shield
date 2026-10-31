@@ -124,6 +124,25 @@ with st.sidebar:
     if target_local_online:
         st.success("🟢 Apex Portal: ONLINE (Port 5000)")
         st.markdown("[🔗 **Open Apex Financial Portal ↗**](http://localhost:5000)")
+        col_hp1, col_hp2 = st.columns(2)
+        with col_hp1:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        with col_hp2:
+            if st.button("🗑️ Clear Logs", use_container_width=True):
+                try:
+                    requests.post("http://127.0.0.1:5000/api/clear-logs", timeout=1.0)
+                except Exception:
+                    pass
+                if LOCAL_FLOW_LOG_FILE.exists():
+                    try:
+                        with open(LOCAL_FLOW_LOG_FILE, "w", encoding="utf-8") as f:
+                            f.write("")
+                    except Exception:
+                        pass
+                st.success("Honeypot logs cleared!")
+                time.sleep(0.5)
+                st.rerun()
     else:
         st.warning("⚪ Apex Portal: OFFLINE")
         st.caption("Start local target website to test live attacks on your PC with zero AWS cost.")
@@ -132,7 +151,12 @@ with st.sidebar:
             target_script = BASE_DIR / "target_website.py"
             try:
                 creation_flag = subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
-                subprocess.Popen([sys.executable, str(target_script)], creationflags=creation_flag)
+                subprocess.Popen(
+                    [sys.executable, str(target_script)],
+                    creationflags=creation_flag,
+                    stdout=subprocess.DEVNULL if os.name != "nt" else None,
+                    stderr=subprocess.DEVNULL if os.name != "nt" else None
+                )
                 st.success("Launching Apex Portal in background...")
                 time.sleep(2)
                 st.rerun()
@@ -149,7 +173,8 @@ with st.sidebar:
     ingest_mode = st.radio(
         "Source:",
         ["🎮 Instant Demo Replay", "💻 Local Target Website (Port 5000)", "☁️ Live AWS S3 Polling"],
-        index=default_ingest_index
+        index=default_ingest_index,
+        key="telemetry_ingest_mode"
     )
 
     st.divider()
