@@ -199,5 +199,18 @@ def cleanup_infrastructure():
     print("Cloud Shield AWS Teardown Completed Successfully!")
     print("=" * 60)
 
+    return {
+        "status": "SUCCESS",
+        "account_id": account_id,
+        "region": region,
+        "ec2_instance": instance_id or "Terminated / Not Found",
+        "s3_bucket": bucket_name or "Deleted / Not Found",
+        "vpc_id": vpc_id or "Deleted / Not Found",
+        "subnet_id": subnet_id or "Deleted / Not Found",
+        "security_group_id": sg_id or "Deleted / Not Found",
+        "flow_log_id": flow_log_id or "Deleted / Not Found",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+
 if __name__ == "__main__":
     cleanup_infrastructure()

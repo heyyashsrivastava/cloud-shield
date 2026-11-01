@@ -570,15 +570,72 @@ with st.sidebar:
 
     # Sidebar Bottom Status & AWS Branding
     st.divider()
-    st.markdown("""
-    <div style="margin-bottom:12px;">
-        <span class="badge-status-online"><span class="pulse-dot"></span> System Online</span>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    # --------------------------------------------------------------------------
+    # ☁️ AWS CLOUD CONTROLS & 1-CLICK POWER SHUTDOWN
+    # --------------------------------------------------------------------------
+    st.markdown("<div style='font-size:0.8rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;'>☁️ AWS Cloud Controls</div>", unsafe_allow_html=True)
+    
+    if infra_active:
+        pub_ip = infra_state.get("public_ip", "3.108.8.33")
+        inst_id = infra_state.get("instance_id", "i-unknown")
+        
+        st.markdown(f"""
+        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span class="badge-status-online"><span class="pulse-dot"></span> System Online</span>
+                <span style="font-size:0.7rem;color:#10b981;background:rgba(16,185,129,0.15);padding:2px 8px;border-radius:12px;font-weight:700;">AWS LIVE</span>
+            </div>
+            <div style="font-size:0.75rem;color:#94a3b8;line-height:1.4;">
+                <b>EC2:</b> <span style="color:#e2e8f0;">{inst_id}</span><br>
+                <b>Target:</b> <a href="http://{pub_ip}/" target="_blank" style="color:#60a5fa;text-decoration:none;">http://{pub_ip}/</a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    pub_ip = infra_state.get("public_ip", "3.108.8.33")
-    if pub_ip and pub_ip != "PENDING":
-        st.markdown(f"<div style='font-size:0.75rem;color:#94a3b8;'>Live Target: <a href='http://{pub_ip}/' target='_blank' style='color:#60a5fa;'>http://{pub_ip}/</a></div>", unsafe_allow_html=True)
+        if st.button("🛑 Turn Off All AWS Services", key="btn_teardown_sidebar", type="primary", use_container_width=True, help="1-Click: Stop and destroy all active AWS resources (EC2, S3, VPC, IAM, SG) to avoid any ongoing cloud charges."):
+            with st.status("🛑 Turning off and destroying all AWS infrastructure...", expanded=True) as status_box:
+                st.write("⏳ Terminating EC2 Target Instance & releasing public IP...")
+                st.write("⏳ Deleting VPC Flow Logs & CloudWatch delivery...")
+                st.write("⏳ Emptying & deleting S3 Data Lake bucket...")
+                st.write("⏳ Removing IAM profiles, security groups, & VPC...")
+                from scripts.cleanup_aws_infra import cleanup_infrastructure
+                try:
+                    res_summary = cleanup_infrastructure()
+                    status_box.update(label="✅ All AWS Services Turned Off (0 Active Resources)", state="complete", expanded=False)
+                    st.success("🎉 All AWS services have been turned off and destroyed cleanly! Zero active cloud charges.")
+                    st.query_params["source"] = "demo"
+                    time.sleep(2)
+                    st.rerun()
+                except Exception as e:
+                    status_box.update(label="❌ Teardown encountered an error", state="error")
+                    st.error(f"Failed to turn off all AWS services: {e}")
+    else:
+        st.markdown("""
+        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:0.75rem;color:#94a3b8;font-weight:600;"><span style="color:#64748b;">⚪</span> AWS Offline</span>
+                <span style="font-size:0.7rem;color:#94a3b8;background:rgba(148,163,184,0.15);padding:2px 8px;border-radius:12px;font-weight:600;">$0 COSTS</span>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;">
+                All cloud resources destroyed. Running in safe local demo mode.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🚀 Re-Deploy AWS Infrastructure", key="btn_deploy_sidebar", use_container_width=True, help="1-Click: Provision fresh VPC, EC2 Target server, and S3 Flow Log bucket on AWS"):
+            with st.status("🚀 Provisioning AWS Infrastructure...", expanded=True) as deploy_box:
+                from scripts.deploy_aws_infra import deploy_infrastructure
+                try:
+                    deploy_infrastructure()
+                    deploy_box.update(label="✅ AWS Infrastructure Ready!", state="complete", expanded=False)
+                    st.success("AWS infrastructure active! Switching to Live S3 Polling...")
+                    st.query_params["source"] = "s3"
+                    time.sleep(2)
+                    st.rerun()
+                except Exception as e:
+                    deploy_box.update(label="❌ Deployment failed", state="error")
+                    st.error(f"Failed to deploy AWS: {e}")
 
     # AWS Logo
     st.markdown("""
@@ -1278,7 +1335,65 @@ elif active_nav == "⚙️ Settings & SOAR":
     with col_inf3:
         st.markdown(f"**S3 Flow Logs Bucket:** `{infra_state.get('s3_bucket', get_bucket_name())}`")
         target_ip_val = infra_state.get('public_ip', '3.108.8.33')
-        st.markdown(f"**Target EC2 Server:** [http://{target_ip_val}/](http://{target_ip_val}/)")
+        if infra_active:
+            st.markdown(f"**Target EC2 Server:** [http://{target_ip_val}/](http://{target_ip_val}/)")
+        else:
+            st.markdown("**Target EC2 Server:** *Offline / Destroyed*")
+
+    # Single-Click AWS Power Shutdown Card
+    if infra_active:
+        st.markdown("""
+        <div style="background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.35);border-radius:10px;padding:16px;margin:14px 0;">
+            <div style="font-weight:700;color:#f87171;font-size:1.05rem;display:flex;align-items:center;gap:6px;">
+                <span>🛑</span> Single-Click AWS Service Shutdown & Cost Protection
+            </div>
+            <div style="font-size:0.83rem;color:#cbd5e1;margin-top:4px;">
+                Done testing or presenting? Stop and destroy all active AWS resources (EC2 instance, VPC, S3 data lake bucket, IAM role, Security Groups) in 1 click to prevent any ongoing cloud charges.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("🛑 Turn Off All AWS Services (Single Click)", key="btn_teardown_settings", type="primary", use_container_width=True, help="Stop & terminate EC2, delete S3 bucket, delete VPC & stop all AWS billing in 1 click"):
+            with st.status("🛑 Turning off and destroying all AWS infrastructure...", expanded=True) as status_box:
+                st.write("⏳ Terminating EC2 Target Instance & releasing public IP...")
+                st.write("⏳ Deleting VPC Flow Logs & CloudWatch delivery...")
+                st.write("⏳ Emptying & deleting S3 Data Lake bucket...")
+                st.write("⏳ Removing IAM profiles, security groups, & VPC...")
+                from scripts.cleanup_aws_infra import cleanup_infrastructure
+                try:
+                    summary = cleanup_infrastructure()
+                    status_box.update(label="✅ All AWS Services Turned Off (0 Active Resources)", state="complete", expanded=False)
+                    st.success("🎉 All AWS services have been turned off and destroyed cleanly! Zero active cloud charges.")
+                    st.query_params["source"] = "demo"
+                    time.sleep(2)
+                    st.rerun()
+                except Exception as e:
+                    status_box.update(label="❌ Teardown failed", state="error")
+                    st.error(f"Error shutting down AWS: {e}")
+    else:
+        st.markdown("""
+        <div style="background:rgba(148, 163, 184, 0.08);border:1px solid rgba(148, 163, 184, 0.25);border-radius:10px;padding:16px;margin:14px 0;">
+            <div style="font-weight:700;color:#94a3b8;font-size:1rem;display:flex;align-items:center;gap:6px;">
+                <span>⚪</span> All AWS Services Offline (Zero Active Cloud Charges)
+            </div>
+            <div style="font-size:0.83rem;color:#64748b;margin-top:4px;">
+                All cloud infrastructure has been cleanly destroyed. The dashboard is currently operating in offline demo replay mode.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("🚀 Re-Deploy AWS Infrastructure", key="btn_deploy_settings", use_container_width=True, help="Provision fresh VPC, EC2 Target, and S3 Flow Logs on AWS"):
+            with st.status("🚀 Provisioning AWS Infrastructure...", expanded=True) as deploy_box:
+                from scripts.deploy_aws_infra import deploy_infrastructure
+                try:
+                    deploy_infrastructure()
+                    deploy_box.update(label="✅ AWS Infrastructure Ready!", state="complete", expanded=False)
+                    st.success("AWS infrastructure active! Switching to Live S3 Polling...")
+                    st.query_params["source"] = "s3"
+                    time.sleep(2)
+                    st.rerun()
+                except Exception as e:
+                    deploy_box.update(label="❌ Deployment failed", state="error")
+                    st.error(f"Failed to deploy AWS: {e}")
 
     st.divider()
 
@@ -1335,17 +1450,3 @@ elif active_nav == "⚙️ Settings & SOAR":
         st.dataframe(ledger_df[["timestamp", "action", "ip", "status", "operator", "mitre_technique", "tamper_evident_valid", "signature"]], use_container_width=True)
     else:
         st.info("No audit ledger events recorded yet.")
-
-    st.divider()
-
-    # Teardown Button
-    if st.button("🗑️ 1-Click AWS Teardown", type="secondary"):
-        with st.spinner("Tearing down all AWS resources cleanly..."):
-            from scripts.cleanup_aws_infra import cleanup_infrastructure
-            try:
-                cleanup_infrastructure()
-                st.success("All AWS resources destroyed cleanly!")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Teardown failed: {e}")
